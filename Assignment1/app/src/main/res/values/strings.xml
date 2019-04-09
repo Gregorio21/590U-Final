@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">EMG Muscle Sensor</string>
+    <string name="title_home">Your Results</string>
+    <string name="title_accel">The EMG values are: </string>
+    <string name="accel_values">N/A</string>
+    <string name="ble_not_supported">ble not supported</string>
+</resources>
