@@ -12,6 +12,7 @@ import android.bluetooth.BluetoothManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -19,6 +20,7 @@ import android.support.annotation.RequiresApi;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -42,6 +44,9 @@ public class MainActivity extends Activity {
     private DescriptiveStatistics stats = new DescriptiveStatistics(10);
     private final int windowSize = 5;
     private double[] features = new double[6];
+    private ImageView bicep = (ImageView) findViewById(R.id.imageView2);
+    private int[] images = new int[4];
+
 
 
     private final BluetoothGattCallback gattCallback =
@@ -73,8 +78,9 @@ public class MainActivity extends Activity {
                         String ts = tsLong.toString();
                         byte b[] = String.format("%s,%s,%d\n", emg_val, ts, fatigue).getBytes();//converting string into byte array
                         try {
-                            file.write(b);
-                            stats.addValue(Double.parseDouble(emg_val));
+                            //file.write(b);
+                            double val = Double.parseDouble(emg_val);
+                            stats.addValue(val);
                             window = (window + 1)%windowSize;
                             if(stats.getN() > 10 && window == 0){
                                 features = new double[6];
@@ -86,6 +92,9 @@ public class MainActivity extends Activity {
                                 features[5] = stats.getStandardDeviation();
                                 //##################################################
                                 //Put classifier here classify(features)
+                                //int level =  (int)(2E-06*val*val - 0.005*val + 3.9831);
+                                
+                                bicep.setImageResource(fatigue - 1);
                             }
                         } catch (Exception e) {
                             System.out.println(e);
@@ -111,6 +120,10 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        images[0] = R.drawable.blue_background;
+        images[1] = R.drawable.green_background;
+        images[2] = R.drawable.orange_background;
+        images[3] = R.drawable.red_background;
         if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
             Toast.makeText(this, R.string.ble_not_supported, Toast.LENGTH_SHORT).show();
             finish();
@@ -153,33 +166,37 @@ public class MainActivity extends Activity {
         });
 
         final Button buttonf1 = findViewById(R.id.button_f1);
-        buttonf1.setOnClickListener(new View.OnClickListener() {
+        buttonf1.setVisibility(View.GONE);
+        /*buttonf1.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 fatigue=1;
             }
-        });
+        });*/
         final Button buttonf2 = findViewById(R.id.button_f2);
-        buttonf2.setOnClickListener(new View.OnClickListener() {
+        buttonf2.setVisibility(View.GONE);
+        /*buttonf2.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 fatigue=2;
             }
-        });
+        });*/
         final Button buttonf3 = findViewById(R.id.button_f3);
-        buttonf3.setOnClickListener(new View.OnClickListener() {
+        buttonf3.setVisibility(View.GONE);
+        /*buttonf3.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 fatigue=3;
             }
-        });
+        });*/
         final Button buttonf4 = findViewById(R.id.button_f4);
-        buttonf4.setOnClickListener(new View.OnClickListener() {
+        buttonf4.setVisibility(View.GONE);
+        /*buttonf4.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 fatigue=4;
             }
-        });
+        });*/
 
 
 
