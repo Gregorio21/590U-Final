@@ -26,6 +26,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.util.UUID;
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 
 
 public class MainActivity extends Activity {
@@ -33,11 +34,14 @@ public class MainActivity extends Activity {
     final float time = System.currentTimeMillis();
     private int REQUEST_ENABLE_BT = 21;
     private final int WRITE_REQUEST_CODE = 1;
-
+    private int window = 0;
     private FileOutputStream file;
     private String emg_val = "";
     private Boolean record = false;
     private int fatigue = 1;
+    private DescriptiveStatistics stats = new DescriptiveStatistics(10);
+    private final int windowSize = 5;
+    private double[] features = new double[6];
 
 
     private final BluetoothGattCallback gattCallback =
@@ -70,6 +74,19 @@ public class MainActivity extends Activity {
                         byte b[] = String.format("%s,%s,%d\n", emg_val, ts, fatigue).getBytes();//converting string into byte array
                         try {
                             file.write(b);
+                            stats.addValue(Double.parseDouble(emg_val));
+                            window = (window + 1)%windowSize;
+                            if(stats.getN() > 10 && window == 0){
+                                features = new double[6];
+                                features[0] = stats.getMean();
+                                features[1] = stats.getVariance();
+                                features[2] = stats.getMax();
+                                features[3] = stats.getMin();
+                                features[4] = stats.getMax() - stats.getMin();
+                                features[5] = stats.getStandardDeviation();
+                                //##################################################
+                                //Put classifier here classify(features)
+                            }
                         } catch (Exception e) {
                             System.out.println(e);
                         }
@@ -116,6 +133,8 @@ public class MainActivity extends Activity {
                 try {
                     file = openFileOutput("EMGdata.csv", Context.MODE_PRIVATE);
                     record=true;
+                    stats.clear();
+                    window = 0;
                 }catch(Exception e){System.out.println(e);}
             }
         });
@@ -127,6 +146,8 @@ public class MainActivity extends Activity {
                 record=false;
                 try{
                     file.close();
+                    stats.clear();
+                    window = 0;
                 }catch(Exception e){System.out.println(e);}
             }
         });
