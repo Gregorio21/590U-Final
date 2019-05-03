@@ -2,7 +2,6 @@ package com.example.assignment1;
 
 import android.Manifest;
 import android.app.Activity;
-import android.app.ListActivity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCallback;
@@ -12,10 +11,8 @@ import android.bluetooth.BluetoothManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.support.annotation.RequiresApi;
 import android.util.Log;
 import android.view.View;
@@ -23,13 +20,12 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.util.UUID;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
-
+import weka.core.DenseInstance;
+import weka.classifiers.Classifier;
+import android.content.res.AssetManager;
 
 public class MainActivity extends Activity {
     private BluetoothAdapter bluetoothAdapter;
@@ -44,9 +40,9 @@ public class MainActivity extends Activity {
     private DescriptiveStatistics stats = new DescriptiveStatistics(10);
     private final int windowSize = 5;
     private double[] features = new double[6];
-    private ImageView bicep = (ImageView) findViewById(R.id.imageView2);
+    private ImageView bicep;
     private int[] images = new int[4];
-
+    private Classifier model;
 
 
     private final BluetoothGattCallback gattCallback =
@@ -72,7 +68,7 @@ public class MainActivity extends Activity {
                             values.setText(emg_val);
                         }
                     });
-
+                    record=true;
                     if(record && !emg_val.isEmpty()) {
                         Long tsLong = System.currentTimeMillis()/1000;
                         String ts = tsLong.toString();
@@ -82,19 +78,26 @@ public class MainActivity extends Activity {
                             double val = Double.parseDouble(emg_val);
                             stats.addValue(val);
                             window = (window + 1)%windowSize;
-                            if(stats.getN() > 10 && window == 0){
-                                features = new double[6];
+                            if(stats.getN() >= 10 && window == 0){
+                                features = new double[3];
                                 features[0] = stats.getMean();
                                 features[1] = stats.getVariance();
-                                features[2] = stats.getMax();
-                                features[3] = stats.getMin();
-                                features[4] = stats.getMax() - stats.getMin();
-                                features[5] = stats.getStandardDeviation();
+                                //features[2] = stats.getMax();
+                                //features[3] = stats.getMin();
+                                features[2] = stats.getMax() - stats.getMin();
+                                Log.d("Mean", Double.toString(features[0]));
+                                Log.d("Var", Double.toString(features[1]));
+                                Log.d("Range", Double.toString(features[2]));
+                                DenseInstance instance = new DenseInstance(1.0,features);
+                                double prediction = model.classifyInstance(instance);
+                                //features[5] = stats.getStandardDeviation();
                                 //##################################################
                                 //Put classifier here classify(features)
                                 //int level =  (int)(2E-06*val*val - 0.005*val + 3.9831);
-                                
-                                bicep.setImageResource(fatigue - 1);
+                                Log.d("Prediction", Double.toString(prediction));
+                                TextView values2 = findViewById(R.id.values2);
+                                values2.setText(String.format("%.2f", prediction));
+                                bicep.setImageResource(images[(int)(prediction)]);
                             }
                         } catch (Exception e) {
                             System.out.println(e);
@@ -120,10 +123,20 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        images[0] = R.drawable.blue_background;
-        images[1] = R.drawable.green_background;
-        images[2] = R.drawable.orange_background;
-        images[3] = R.drawable.red_background;
+        images[0] = R.mipmap.blue_foreground;
+        images[1] = R.mipmap.green_foreground;
+        images[2] = R.mipmap.orange_foreground;
+        images[3] = R.mipmap.red_foreground;
+        bicep = findViewById(R.id.imageView2);
+        AssetManager assetManager = getAssets();
+        try {
+
+            model = (Classifier) weka.core.SerializationHelper.read(assetManager.open("model.pt"));
+        }
+
+        catch (Exception e){
+            Log.d("FAIL", "FAILED TO LOAD MODEL");
+        }
         if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
             Toast.makeText(this, R.string.ble_not_supported, Toast.LENGTH_SHORT).show();
             finish();
@@ -139,12 +152,14 @@ public class MainActivity extends Activity {
         BluetoothGatt EMG = bluetoothAdapter.getRemoteDevice("C9:9E:F0:4F:DD:4B").connectGatt(this,true, gattCallback);
         //EMG.getService(UUID.fromString("6E400003-B5A3-F393-E0A9-E50E24DCCA9E")).getCharacteristic(UUID.fromString("6E400003-B5A3-F393-E0A9-E50E24DCCA9E"));
 
+
         final Button startButton = findViewById(R.id.start_button);
+        startButton.setVisibility(View.GONE);
         startButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 try {
-                    file = openFileOutput("EMGdata.csv", Context.MODE_PRIVATE);
+                    //file = openFileOutput("EMGdata.csv", Context.MODE_PRIVATE);
                     record=true;
                     stats.clear();
                     window = 0;
@@ -153,12 +168,13 @@ public class MainActivity extends Activity {
         });
 
         final Button stopButton = findViewById(R.id.stop_button);
+        stopButton.setVisibility(View.GONE);
         stopButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 record=false;
                 try{
-                    file.close();
+                    //file.close();
                     stats.clear();
                     window = 0;
                 }catch(Exception e){System.out.println(e);}
